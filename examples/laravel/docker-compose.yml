@@ -24,6 +24,17 @@ services:
     networks:
       - internal
       - local-mysql
+  npm-runner:
+    build:
+      context: .
+      dockerfile: ./etc/docker/app.dockerfile
+    command: npm run watch
+    restart: on-failure
+    working_dir: /src
+    volumes:
+      - ./etc/php/php.ini:/usr/local/etc/php/conf.d/00_mvc.ini:delegated,ro
+      - .:/src:delegated
+      - /storage/logs
   scheduler:
     build:
       context: .
