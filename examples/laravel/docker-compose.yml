@@ -24,7 +24,21 @@ services:
     networks:
       - internal
       - local-mysql
-  worker:
+  scheduler:
+    build:
+      context: .
+      dockerfile: ./etc/docker/app.dockerfile
+    command: php artisan schedule:work
+    restart: on-failure
+    working_dir: /src
+    volumes:
+      - ./etc/php/php.ini:/usr/local/etc/php/conf.d/00_mvc.ini:delegated,ro
+      - .:/src:delegated
+      - /storage/logs
+    networks:
+      - internal
+      - local-mysql
+  queue-runner:
     build:
       context: .
       dockerfile: ./etc/docker/app.dockerfile
