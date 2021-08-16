@@ -1,9 +1,23 @@
 version: '3.7'
 
 services:
+  composer-installer:
+    build:
+      context: .
+      dockerfile: ./etc/docker/app.dockerfile
+    command: /bin/bash -c "composer install && php artisan storage:link && php artisan key:generate"
+    restart: on-failure
+    working_dir: /src
+    volumes:
+      - ./etc/php/php.ini:/usr/local/etc/php/conf.d/00_mvc.ini:delegated,ro
+      - .:/src:delegated
+      - /storage/logs
+
   web:
     image: nginx:alpine
     working_dir: /src
+    depends_on:
+        - composer-installer
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.${APP_NAME}.rule=Host(`${APP_URL}`)"
@@ -13,33 +27,42 @@ services:
     networks:
       - internal
       - traefik
+
   app:
     build:
       context: .
       dockerfile: ./etc/docker/app.dockerfile
     working_dir: /src
+    depends_on:
+        - composer-installer
     volumes:
-      - ./etc/php/php.ini:/usr/local/etc/php/conf.d/00_mvc.ini:delegated,ro
+      - ./etc/php/php.ini:/usr/local/etc/php/conf.d/01_mvc.ini:delegated,ro
       - .:/src:delegated
     networks:
       - internal
       - local-mysql
+
   npm-runner:
     build:
       context: .
       dockerfile: ./etc/docker/app.dockerfile
-    command: npm run watch
+    command: /bin/bash -c "npm ci && npm run watch"
+    depends_on:
+        - composer-installer
     restart: on-failure
     working_dir: /src
     volumes:
       - ./etc/php/php.ini:/usr/local/etc/php/conf.d/00_mvc.ini:delegated,ro
       - .:/src:delegated
       - /storage/logs
+
   scheduler:
     build:
       context: .
       dockerfile: ./etc/docker/app.dockerfile
     command: php artisan schedule:work
+    depends_on:
+        - composer-installer
     restart: on-failure
     working_dir: /src
     volumes:
@@ -49,11 +72,14 @@ services:
     networks:
       - internal
       - local-mysql
+
   queue-runner:
     build:
       context: .
       dockerfile: ./etc/docker/app.dockerfile
     command: php artisan queue:listen --verbose
+    depends_on:
+        - composer-installer
     depends_on:
       - redis
     restart: on-failure
@@ -65,13 +91,17 @@ services:
     networks:
       - internal
       - local-mysql
+
   redis:
     image: redis
     command: redis-server
+    depends_on:
+        - composer-installer
     volumes:
       - redis:/data:delegated
     networks:
       - internal
+
 volumes:
   redis:
 networks:
