@@ -2,7 +2,6 @@ version: '3.7'
 
 services:
   assets:
-    tty: true
     command: |
       /bin/bash -c "
         composer install &&
@@ -19,6 +18,9 @@ services:
     volumes:
       - ./etc/php/php.ini:/usr/local/etc/php/conf.d/01_mvc.ini:delegated,ro
       - .:/src:delegated
+    ports:
+      - 3000:3000
+      - 3001:3001
     networks:
       - internal
       - local-mysql
