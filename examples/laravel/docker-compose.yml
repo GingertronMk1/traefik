@@ -1,23 +1,31 @@
 version: '3.7'
 
 services:
-  composer-installer:
+  assets:
+    tty: true
+    command: |
+      /bin/bash -c "
+        composer install &&
+        php artisan storage:link &&
+        php artisan key:generate &&
+        npm ci &&
+        npm run watch
+      "
     build:
       context: .
       dockerfile: ./etc/docker/app.dockerfile
-    command: /bin/bash -c "composer install && php artisan storage:link && php artisan key:generate"
-    restart: on-failure
     working_dir: /src
+    restart: on-failure
     volumes:
-      - ./etc/php/php.ini:/usr/local/etc/php/conf.d/00_mvc.ini:delegated,ro
+      - ./etc/php/php.ini:/usr/local/etc/php/conf.d/01_mvc.ini:delegated,ro
       - .:/src:delegated
-      - /storage/logs
+    networks:
+      - internal
+      - local-mysql
 
   web:
     image: nginx:alpine
     working_dir: /src
-    depends_on:
-        - composer-installer
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.${APP_NAME}.rule=Host(`${APP_URL}`)"
@@ -33,8 +41,7 @@ services:
       context: .
       dockerfile: ./etc/docker/app.dockerfile
     working_dir: /src
-    depends_on:
-        - composer-installer
+    restart: on-failure
     volumes:
       - ./etc/php/php.ini:/usr/local/etc/php/conf.d/01_mvc.ini:delegated,ro
       - .:/src:delegated
@@ -42,27 +49,11 @@ services:
       - internal
       - local-mysql
 
-  npm-runner:
-    build:
-      context: .
-      dockerfile: ./etc/docker/app.dockerfile
-    command: /bin/bash -c "npm ci && npm run watch"
-    depends_on:
-        - composer-installer
-    restart: on-failure
-    working_dir: /src
-    volumes:
-      - ./etc/php/php.ini:/usr/local/etc/php/conf.d/00_mvc.ini:delegated,ro
-      - .:/src:delegated
-      - /storage/logs
-
   scheduler:
     build:
       context: .
       dockerfile: ./etc/docker/app.dockerfile
     command: php artisan schedule:work
-    depends_on:
-        - composer-installer
     restart: on-failure
     working_dir: /src
     volumes:
@@ -79,8 +70,6 @@ services:
       dockerfile: ./etc/docker/app.dockerfile
     command: php artisan queue:listen --verbose
     depends_on:
-        - composer-installer
-    depends_on:
       - redis
     restart: on-failure
     working_dir: /src
@@ -95,8 +84,6 @@ services:
   redis:
     image: redis
     command: redis-server
-    depends_on:
-        - composer-installer
     volumes:
       - redis:/data:delegated
     networks:
