@@ -20,17 +20,7 @@ services:
       - ./.certs:/.certs
     networks:
       - traefik
-  php-my-admin:
-    restart: always
-    image: phpmyadmin
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.ginge.localhost`)"
-    networks:
-      - traefik
-      - local-mysql
-    environment: 
-      - "PMA_HOSTS=local-mysql"
+
   local-mysql:
     restart: always
     image: mysql:8
@@ -38,15 +28,64 @@ services:
     ports:
       - 3306:3306
     environment:
-      - MYSQL_ROOT_PASSWORD=root
+      MYSQL_ROOT_PASSWORD: root
     volumes:
     - mysql-data:/var/lib/mysql
     networks:
         - local-mysql
+
+  mysql-admin:
+    restart: always
+    image: adminer
+    depends_on:
+      - local-mysql
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mysql-admin.rule=Host(`mysql-admin.ginge.localhost`)"
+    networks:
+      - traefik
+      - local-mysql
+    environment: 
+      ADMINER_DEFAULT_SERVER: local-mysql
+      ADMINER_DEFAULT_DB_DRIVER: mysql
+
+
+  local-pgsql:
+    restart: always
+    image: postgres:13
+    ports:
+      - 5432:5432
+    environment: 
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+    volumes:
+    - pgsql-data:/var/lib/postgresql/data
+    networks:
+        - local-pgsql
+
+  pgsql-admin:
+    restart: always
+    image: adminer
+    depends_on:
+      - local-pgsql
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pgsql-admin.rule=Host(`pgsql-admin.ginge.localhost`)"
+    networks:
+      - traefik
+      - local-pgsql
+    environment: 
+      ADMINER_DEFAULT_SERVER: local-pgsql
+      ADMINER_DEFAULT_DB_DRIVER: pgsql
+
+
 volumes:
   mysql-data:
+  pgsql-data:
 networks:
   local-mysql:
     external: true
   traefik:
+    external: true
+  local-pgsql:
     external: true
