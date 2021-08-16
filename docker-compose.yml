@@ -1,4 +1,4 @@
-version: '1'
+version: '3.7'
 
 services:
   traefik:
@@ -20,6 +20,17 @@ services:
       - ./.certs:/.certs
     networks:
       - traefik
+  php-my-admin:
+    restart: always
+    image: phpmyadmin
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.ginge.localhost`)"
+    networks:
+      - traefik
+      - local-mysql
+    environment: 
+      - "PMA_HOSTS=local-mysql"
   local-mysql:
     restart: always
     image: mysql:8
