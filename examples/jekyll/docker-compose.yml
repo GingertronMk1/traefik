@@ -2,7 +2,9 @@ version: "3.7"
    
 services:
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: web.dockerfile
     working_dir: /usr/src/app
     command: | 
       bundle exec jekyll serve
@@ -10,7 +12,7 @@ services:
       --livereload
       --livereload-port 4001
     volumes:
-      - .:/usr/src/app:delegated
+      - .:/usr/src/app
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.jekyll.loadbalancer.server.port=4000"
@@ -25,12 +27,14 @@ services:
 
 
   assets:
-    image: node:16
+    build: 
+      context: .
+      dockerfile: node.dockerfile
     restart: on-failure
     working_dir: /node
     volumes:
-      - .:/node:delegated
-    command: /bin/bash -c "npm ci && npm run watch"
+      - .:/node
+    command: npm run watch
     networks:
       - internal
     ports:
