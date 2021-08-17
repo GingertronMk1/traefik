@@ -76,7 +76,7 @@ services:
       - local-pgsql
     environment: 
       ADMINER_DEFAULT_SERVER: local-pgsql
-      ADMINER_DEFAULT_DB_DRIVER: pgsql
+      ADMINER_DEFAULT_DB_DRIVER: postgresql
 
 
 volumes:
