@@ -1,0 +1,38 @@
+version: "3.7"
+   
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.django.rule=Host(`django.ginge.localhost`)"
+    networks:
+      - internal
+      - traefik
+      - local-pgsql
+    ports:
+      - 8000:8000
+
+  assets:
+    image: node:16
+    working_dir: /code
+    restart: on-failure
+    volumes:
+      - .:/code
+      - ./static:/static
+    command: npm run watch
+    networks:
+      - internal
+    ports:
+      - 3000:3000
+      - 3001:3001
+
+networks:
+  internal:
+  traefik:
+    external: true
+  local-pgsql:
+    external: true
