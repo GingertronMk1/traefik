@@ -1,6 +1,15 @@
+# Setup
+
+Once the files are copied run the following commands:
+
+```sh
+docker-compose build
+docker-compose up -d
+```
+
 # BrowserSync
 
-In order to enable BrowserSync you must pass it the following object as config
+In order to enable BrowserSync you must pass it the following object as config:
 
 ```javascript
 {

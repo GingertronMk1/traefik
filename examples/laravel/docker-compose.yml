@@ -1,36 +1,12 @@
 version: '3.7'
 
 services:
-  assets:
-    command: |
-      /bin/bash -c "
-        composer install &&
-        php artisan storage:link &&
-        php artisan key:generate &&
-        npm ci &&
-        npm run watch
-      "
-    build:
-      context: .
-      dockerfile: ./etc/docker/app.dockerfile
-    working_dir: /src
-    restart: on-failure
-    volumes:
-      - ./etc/php/php.ini:/usr/local/etc/php/conf.d/01_mvc.ini:delegated,ro
-      - .:/src:delegated
-    ports:
-      - 3000:3000
-      - 3001:3001
-    networks:
-      - internal
-      - local-mysql
-
   web:
     image: nginx:alpine
     working_dir: /src
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.${APP_NAME}.rule=Host(`${APP_URL}`)"
+      traefik.enable: true
+      traefik.http.routers.${APP_NAME}.rule: Host(`${APP_URL}`)
     volumes:
       - ./etc/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:delegated,ro
       - .:/src:delegated
@@ -42,6 +18,7 @@ services:
     build:
       context: .
       dockerfile: ./etc/docker/app.dockerfile
+    image: ${APP_NAME}/laravel-image:latest
     working_dir: /src
     restart: on-failure
     volumes:
@@ -51,27 +28,11 @@ services:
       - internal
       - local-mysql
 
-  scheduler:
-    build:
-      context: .
-      dockerfile: ./etc/docker/app.dockerfile
-    command: php artisan schedule:work
-    restart: on-failure
-    working_dir: /src
-    volumes:
-      - ./etc/php/php.ini:/usr/local/etc/php/conf.d/00_mvc.ini:delegated,ro
-      - .:/src:delegated
-      - /storage/logs
-    networks:
-      - internal
-      - local-mysql
-
-  queue-runner:
-    build:
-      context: .
-      dockerfile: ./etc/docker/app.dockerfile
+  queue:
+    image: ${APP_NAME}/laravel-image:latest
     command: php artisan queue:listen --verbose
     depends_on:
+      - app
       - redis
     restart: on-failure
     working_dir: /src
@@ -83,6 +44,35 @@ services:
       - internal
       - local-mysql
 
+  schedule:
+    image: ${APP_NAME}/laravel-image:latest
+    command: php artisan schedule:work --verbose
+    depends_on:
+      - app
+      - redis
+    restart: on-failure
+    working_dir: /src
+    volumes:
+      - ./etc/php/php.ini:/usr/local/etc/php/conf.d/00_mvc.ini:delegated,ro
+      - .:/src:delegated
+      - /storage/logs
+    networks:
+      - internal
+      - local-mysql
+
+  node:
+    command: npm run watch
+    build:
+      context: .
+      dockerfile: ./etc/docker/node.dockerfile
+    working_dir: /src
+    restart: on-failure
+    volumes:
+      - .:/src:delegated
+      - node_modules:/src/node_modules
+    networks:
+      - internal
+
   redis:
     image: redis
     command: redis-server
@@ -93,6 +83,7 @@ services:
 
 volumes:
   redis:
+  node_modules:
 networks:
   internal:
   traefik:
